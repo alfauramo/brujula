@@ -26,10 +26,10 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; w
     const worker = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
     const buffer = await file.arrayBuffer();
-    const document = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+    const pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
     const pages: string[] = [];
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
+    for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+      const page = await pdfDocument.getPage(pageNumber);
       const content = await page.getTextContent();
       const text = content.items
         .map((item) => ('str' in item ? item.str : ''))
@@ -37,10 +37,36 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; w
         .replace(/\s+/g, ' ');
       pages.push(text);
     }
-    const text = pages.join('\n\n').trim();
+    let text = pages.join('\n\n').trim();
     if (text.length < 200) {
-      warnings.push(
-        'Se ha leído muy poco texto. Si tu PDF es una imagen escaneada necesitarás un OCR o pegar el CV a mano.',
+      warnings.push('El PDF tiene poco texto: se intentará OCR por si está escaneado (puede tardar).');
+      try {
+        const Tesseract = await import('tesseract.js');
+        const worker = await Tesseract.createWorker(['spa', 'eng'], 1, { logger: () => {} });
+        const ocrPages: string[] = [];
+        const limit = Math.min(pdfDocument.numPages, 5);
+        for (let pageNumber = 1; pageNumber <= limit; pageNumber += 1) {
+          const page = await pdfDocument.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const context = canvas.getContext('2d');
+          if (!context) continue;
+          await page.render({ canvasContext: context, viewport, canvas }).promise;
+          const result = await worker.recognize(canvas);
+          ocrPages.push(result?.data?.text ?? '');
+        }
+        await worker.terminate();
+        const ocrText = ocrPages.join('\n\n').trim();
+        if (ocrText.length > text.length) text = ocrText;
+      } catch {
+        warnings.push('No se pudo hacer OCR del PDF. Pega el texto a mano si el archivo es una imagen.');
+      }
+    }
+    if (!text.trim()) {
+      throw new Error(
+        'No se ha podido extraer texto del PDF. Si es un escaneo, conviértelo a imagen (PNG/JPG) o pega el CV a mano.',
       );
     }
     return { text, warnings };
