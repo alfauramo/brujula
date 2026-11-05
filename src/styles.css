@@ -3,37 +3,37 @@
    Papel cálido, tinta, verde profundo y terracota.
    ============================================================ */
 
-/* Tema blanco y accesible (WCAG AA). */
+/* Tema blanco moderno y accesible (WCAG AA). */
 :root {
-  --bg: #ffffff;
+  --bg: #f6f7f9;
   --surface: #ffffff;
-  --surface-2: #f3f5f7;
-  --surface-3: #e7ebef;
-  --ink: #16181d;
-  --ink-2: #44505d;
-  --ink-3: #5f6b78;
-  --line: #d9dee4;
-  --line-strong: #b9c2cb;
-  --accent: #0b5f57;
-  --accent-strong: #084740;
+  --surface-2: #eef1f5;
+  --surface-3: #e2e7ee;
+  --ink: #0f172a;
+  --ink-2: #334155;
+  --ink-3: #64748b;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --accent: #0d9488;
+  --accent-strong: #0f766e;
   --accent-ink: #ffffff;
-  --accent-soft: #e3f1ed;
-  --terracotta: #a33f1a;
-  --terracotta-soft: #fde9e0;
-  --good: #1f6b3a;
-  --good-soft: #e2f0e6;
-  --bad: #a32f24;
-  --bad-soft: #fde4e1;
-  --gold: #8a6100;
-  --gold-soft: #f7eccf;
-  --radius: 14px;
-  --radius-sm: 9px;
-  --shadow: 0 1px 2px rgba(22, 24, 29, 0.05), 0 14px 34px -26px rgba(22, 24, 29, 0.25);
-  --shadow-lg: 0 2px 4px rgba(22, 24, 29, 0.06), 0 40px 80px -40px rgba(22, 24, 29, 0.28);
+  --accent-soft: #ccfbf1;
+  --terracotta: #ea580c;
+  --terracotta-soft: #ffedd5;
+  --good: #16a34a;
+  --good-soft: #dcfce7;
+  --bad: #dc2626;
+  --bad-soft: #fee2e2;
+  --gold: #ca8a04;
+  --gold-soft: #fef9c3;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 4px 12px rgba(15, 23, 42, 0.08), 0 24px 48px -20px rgba(15, 23, 42, 0.18);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
-  --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, "Courier New", monospace;
-  --sidebar: 252px;
+  --sidebar: 260px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -99,7 +99,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--bg);
-  background-image: none;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(13, 148, 136, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(234, 88, 12, 0.05), transparent);
   color: var(--ink);
   font-family: var(--sans);
   font-size: 15px;
@@ -167,8 +169,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-.btn-primary { background: var(--accent); color: var(--accent-ink); }
-.btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 12px -4px rgba(13, 148, 136, 0.45); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-strong); box-shadow: 0 6px 16px -4px rgba(13, 148, 136, 0.55); }
 
 .btn-ghost { border-color: var(--line); background: var(--surface); color: var(--ink); }
 .btn-ghost:hover:not(:disabled) { background: var(--surface-2); border-color: var(--line-strong); }
@@ -280,8 +282,9 @@ ul { margin: 0; padding: 0; list-style: none; }
 .nav-item:hover { background: var(--surface-2); color: var(--ink); }
 .nav-item.is-active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 [data-theme="dark"] .nav-item.is-active { color: var(--ink); }
 .nav-badge {
@@ -664,14 +667,14 @@ ul { margin: 0; padding: 0; list-style: none; }
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 17px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: var(--shadow);
   transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.job-card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.job-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .job-card.is-marked { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
 .job-card-top { display: flex; gap: 12px; align-items: flex-start; }
 .job-card-heading { flex: 1; min-width: 0; }
@@ -784,8 +787,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(24, 21, 17, 0.45);
-  backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
   padding: 18px;
