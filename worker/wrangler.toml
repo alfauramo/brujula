@@ -1,0 +1,9 @@
+name = "brujula-oauth"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# El client id es público. El client secret y STATE_SECRET se guardan con
+# `wrangler secret put` y nunca se escriben aquí.
+[vars]
+GITHUB_CLIENT_ID = "TU_CLIENT_ID"
+ALLOWED_ORIGINS = "https://TU_USUARIO.github.io,http://localhost:5173"
