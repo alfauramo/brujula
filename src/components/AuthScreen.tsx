@@ -52,7 +52,12 @@ export function AuthScreen({ notify }: { notify: (message: string, kind?: 'succe
       const { error } = await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } });
       if (error) throw error;
     } catch (reason) {
-      notify(reason instanceof Error ? reason.message : 'No se pudo iniciar GitHub.', 'error');
+      notify(
+        reason instanceof Error
+          ? `${reason.message}. Activa el proveedor GitHub en Supabase (Authentication → Providers) o usa email.`
+          : 'No se pudo iniciar GitHub.',
+        'error',
+      );
       setBusy(false);
     }
   };
