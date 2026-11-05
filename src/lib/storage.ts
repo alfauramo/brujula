@@ -20,9 +20,17 @@ interface Meta {
   updatedAt?: number;
 }
 
-export function readMeta(): Meta | null {
+function stateKey(scope = ''): string {
+  return scope ? `${STATE_KEY}:${scope}` : STATE_KEY;
+}
+
+function metaKey(scope = ''): string {
+  return scope ? `${META_KEY}:${scope}` : META_KEY;
+}
+
+export function readMeta(scope = ''): Meta | null {
   try {
-    const raw = localStorage.getItem(META_KEY);
+    const raw = localStorage.getItem(metaKey(scope));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Meta;
     return parsed.locked ? parsed : null;
@@ -31,21 +39,21 @@ export function readMeta(): Meta | null {
   }
 }
 
-export function isLocked(): boolean {
-  return readMeta() !== null;
+export function isLocked(scope = ''): boolean {
+  return readMeta(scope) !== null;
 }
 
-export function writeMeta(meta: Meta): void {
-  localStorage.setItem(META_KEY, JSON.stringify(meta));
+export function writeMeta(meta: Meta, scope = ''): void {
+  localStorage.setItem(metaKey(scope), JSON.stringify(meta));
 }
 
-export function clearMeta(): void {
-  localStorage.removeItem(META_KEY);
+export function clearMeta(scope = ''): void {
+  localStorage.removeItem(metaKey(scope));
 }
 
-export function readPlainState(): AppState | null {
+export function readPlainState(scope = ''): AppState | null {
   try {
-    const raw = localStorage.getItem(STATE_KEY);
+    const raw = localStorage.getItem(stateKey(scope));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (isEnvelope(parsed)) return null;
@@ -55,8 +63,8 @@ export function readPlainState(): AppState | null {
   }
 }
 
-export async function savePlainState(state: AppState): Promise<void> {
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+export async function savePlainState(state: AppState, scope = ''): Promise<void> {
+  localStorage.setItem(stateKey(scope), JSON.stringify(state));
 }
 
 export async function saveEncryptedState(
@@ -64,15 +72,19 @@ export async function saveEncryptedState(
   key: CryptoKey,
   saltBase64: string,
   iterations: number,
+  scope = '',
 ): Promise<void> {
   const envelope = await encryptWithKey(state, key, fromBase64(saltBase64), iterations);
-  localStorage.setItem(STATE_KEY, JSON.stringify(envelope));
-  writeMeta({ locked: true, salt: saltBase64, iterations, updatedAt: Date.now() });
+  localStorage.setItem(stateKey(scope), JSON.stringify(envelope));
+  writeMeta({ locked: true, salt: saltBase64, iterations, updatedAt: Date.now() }, scope);
 }
 
-export async function unlockState(passphrase: string): Promise<{ state: AppState; key: CryptoKey; salt: string; iterations: number }> {
-  const meta = readMeta();
-  const raw = localStorage.getItem(STATE_KEY);
+export async function unlockState(
+  passphrase: string,
+  scope = '',
+): Promise<{ state: AppState; key: CryptoKey; salt: string; iterations: number }> {
+  const meta = readMeta(scope);
+  const raw = localStorage.getItem(stateKey(scope));
   if (!meta || !meta.salt || !raw) {
     throw new Error('No hay datos cifrados en este navegador.');
   }
@@ -93,26 +105,27 @@ export async function unlockState(passphrase: string): Promise<{ state: AppState
 export async function enableLock(
   passphrase: string,
   state: AppState,
+  scope = '',
 ): Promise<{ key: CryptoKey; salt: string; iterations: number }> {
   const saltBytes = randomBytes(16);
   const salt = toBase64(saltBytes);
   const key = await deriveKey(passphrase, saltBytes);
-  await saveEncryptedState(state, key, salt, 310_000);
+  await saveEncryptedState(state, key, salt, 310_000, scope);
   return { key, salt, iterations: 310_000 };
 }
 
-export async function disableLock(state: AppState): Promise<void> {
-  await savePlainState(state);
-  clearMeta();
+export async function disableLock(state: AppState, scope = ''): Promise<void> {
+  await savePlainState(state, scope);
+  clearMeta(scope);
 }
 
-export function hasPlainData(): boolean {
-  return localStorage.getItem(STATE_KEY) !== null && !isLocked();
+export function hasPlainData(scope = ''): boolean {
+  return localStorage.getItem(stateKey(scope)) !== null && !isLocked(scope);
 }
 
-export function wipeAll(): void {
-  localStorage.removeItem(STATE_KEY);
-  localStorage.removeItem(META_KEY);
+export function wipeAll(scope = ''): void {
+  localStorage.removeItem(stateKey(scope));
+  localStorage.removeItem(metaKey(scope));
   localStorage.removeItem(JOBS_CACHE_KEY);
   sessionStorage.removeItem('brujula:gh_token');
 }
@@ -178,8 +191,8 @@ export function validateState(value: unknown): AppState {
       theme: 'auto',
       sources: ['demo'],
       lastSyncAt: null,
-      gistId: null,
       ...(state.settings ?? {}),
+      gistId: state.settings?.gistId ?? null,
     },
     updatedAt: Date.now(),
   };

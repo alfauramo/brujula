@@ -13,7 +13,7 @@ idioma.
 
 ## Qué incluye
 
-- **Onboarding en 4 pasos**: nombre, CV (PDF/DOCX/TXT o pegar texto), criterios y resumen.
+- **Onboarding en 4 pasos**: nombre, CV (PDF, DOCX, DOC, imagen con OCR o TXT) o pegar texto, criterios y resumen.
 - **Análisis de CV en el dispositivo** con PDF.js y Mammoth: extrae contacto, competencias, idiomas,
   formación, años de experiencia, roles probables y sector.
 - **Motor de encaje explicable** (0–100) con razones a favor y en contra, coincidencias y ausencias.
@@ -30,7 +30,9 @@ idioma.
   desbloqueo.
 - **Exportación/importación** de copia de seguridad, cifrada o no.
 - **GitHub opcional**: login vía proxy OAuth y copia cifrada en un Gist privado.
-- **Tema claro/oscuro** y diseño responsive.
+- **Cuenta opcional con Supabase** (email/contraseña, enlace mágico o GitHub): cada persona tiene sus datos separados
+  en Postgres con RLS. Sin configurar, la app funciona en modo local.
+- **Tema blanco accesible** (WCAG AA) y oscuro, diseño responsive.
 
 ## Lo que **no** hace
 

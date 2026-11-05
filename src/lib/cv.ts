@@ -57,14 +57,71 @@ export async function extractTextFromFile(file: File): Promise<{ text: string; w
   }
 
   if (name.endsWith('.doc')) {
-    throw new Error('El formato .doc antiguo no se puede leer. Guárdalo como PDF o DOCX.');
+    const text = await extractLegacyDoc(file);
+    if (!text.trim()) {
+      throw new Error('No se ha podido leer el .doc antiguo. Guárdalo como PDF o DOCX y vuelve a subirlo.');
+    }
+    warnings.push('El formato .doc antiguo se lee de forma aproximada; conviértelo a DOCX si falta texto.');
+    return { text, warnings };
+  }
+
+  if (file.type.startsWith('image/') || /\\.(png|jpe?g|webp|bmp|tif{1,2})$/.test(name)) {
+    const Tesseract = await import('tesseract.js');
+    const worker = await Tesseract.createWorker(['spa', 'eng'], 1, { logger: () => {} });
+    try {
+      const result = await worker.recognize(file);
+      const text = (result?.data?.text ?? '').trim();
+      if (!text) throw new Error('No se ha detectado texto en la imagen.');
+      warnings.push('Texto extraído por OCR (español + inglés). Revisa que sea correcto antes de guardar.');
+      return { text, warnings };
+    } finally {
+      await worker.terminate();
+    }
   }
 
   if (name.endsWith('.txt') || name.endsWith('.md') || file.type.startsWith('text/')) {
     return { text: (await file.text()).trim(), warnings };
   }
 
-  throw new Error('Formato no compatible. Sube un PDF, DOCX o TXT.');
+  throw new Error('Formato no compatible. Sube un PDF, DOCX, DOC, imagen (PNG/JPG) o TXT.');
+}
+
+async function extractLegacyDoc(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  const score = (text: string): number =>
+    (text.match(/[A-Za-zÁÉÍÓÚáéíóúñÑüÜ]/g) ?? []).length;
+
+  // Intento UTF-16LE (formato habitual de Word 97-2003).
+  let utf16 = '';
+  let run16 = '';
+  for (let index = 0; index + 1 < bytes.length; index += 2) {
+    const code = bytes[index] | (bytes[index + 1] << 8);
+    if ((code >= 32 && code !== 127) || code === 10 || code === 13) {
+      run16 += String.fromCharCode(code);
+    } else {
+      if (run16.length >= 6) utf16 += run16 + '\\n';
+      run16 = '';
+    }
+  }
+  if (run16.length >= 6) utf16 += run16;
+
+  // Intento Latin-1.
+  let latin1 = '';
+  let run8 = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    const code = bytes[index];
+    if ((code >= 32 && code < 127) || code === 10 || code === 13 || (code >= 160 && code <= 255)) {
+      run8 += String.fromCharCode(code);
+    } else {
+      if (run8.length >= 6) latin1 += run8 + '\\n';
+      run8 = '';
+    }
+  }
+  if (run8.length >= 6) latin1 += run8;
+
+  return score(utf16) >= score(latin1) ? utf16.trim() : latin1.trim();
 }
 
 function findEmail(text: string): string {

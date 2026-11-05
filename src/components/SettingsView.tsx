@@ -332,7 +332,7 @@ export function SettingsView({
                   className={`choice${state.settings.theme === theme ? ' is-active' : ''}`}
                   onClick={() => onSettings({ theme })}
                 >
-                  {theme === 'auto' ? 'Sistema' : theme === 'light' ? 'Claro' : 'Oscuro'}
+                  {theme === 'auto' ? 'Sistema' : theme === 'light' ? 'Blanco' : 'Oscuro'}
                 </button>
               ))}
             </div>

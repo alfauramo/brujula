@@ -438,6 +438,19 @@ function JobCard({
         <button type="button" className="btn btn-primary btn-sm" onClick={onOpen}>
           Ver detalle
         </button>
+        {job.url ? (
+          <a
+            className="btn btn-ghost btn-sm"
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Icon name="external" size={13} /> Ver oferta
+          </a>
+        ) : (
+          <span className="fine-print">Sin enlace externo</span>
+        )}
         <button
           type="button"
           className="icon-button"

@@ -209,7 +209,7 @@ export function Onboarding({
               <input
                 ref={fileInput}
                 type="file"
-                accept=".pdf,.docx,.txt,.md,application/pdf,text/plain"
+                accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/pdf,application/msword,image/*"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void onFile(file);
@@ -217,7 +217,7 @@ export function Onboarding({
               />
               <Icon name={busy ? 'refresh' : 'upload'} size={26} />
               <strong>{busy ? 'Leyendo tu CV…' : 'Arrastra tu CV aquí o haz clic'}</strong>
-              <span>PDF, DOCX o TXT · máximo 15 MB</span>
+              <span>PDF, DOCX, DOC, imagen (OCR) o TXT · máximo 15 MB</span>
             </label>
 
             <div className="onboarding-alt-actions">

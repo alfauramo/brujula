@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
 import type { AppState, Criteria, Decision, Job, JobState, Profile, Settings, SourceError, SourceId } from './types';
 import { DEMO_CV_TEXT } from './data/demo';
 import { defaultCriteria, emptyState } from './lib/defaults';
@@ -31,6 +32,9 @@ import {
 } from './lib/github';
 import type { GitHubUser } from './lib/github';
 import { uid } from './lib/id';
+import { loadCloudState, saveCloudState, deleteCloudState } from './lib/supabase-data';
+import { supabase } from './lib/supabase';
+import { AuthScreen } from './components/AuthScreen';
 import { Onboarding } from './components/Onboarding';
 import { Dashboard } from './components/Dashboard';
 import { OffersView } from './components/OffersView';
@@ -43,7 +47,7 @@ import { Icon, ToastHost } from './components/ui';
 import type { ToastItem } from './components/ui';
 
 type Route = 'inicio' | 'ofertas' | 'seguimiento' | 'perfil' | 'criterios' | 'ajustes';
-type Phase = 'loading' | 'locked' | 'ready';
+type Phase = 'loading' | 'auth' | 'locked' | 'ready';
 
 const ROUTES: Route[] = ['inicio', 'ofertas', 'seguimiento', 'perfil', 'criterios', 'ajustes'];
 
@@ -76,6 +80,7 @@ function download(filename: string, content: string): void {
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
+  const [user, setUser] = useState<User | null>(null);
   const [route, setRoute] = useState<Route>(readRoute);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [remoteJobs, setRemoteJobs] = useState<Job[]>([]);
@@ -89,6 +94,7 @@ export default function App() {
 
   const keyRef = useRef<{ key: CryptoKey; salt: string; iterations: number } | null>(null);
   const sourcesRef = useRef<SourceId[]>([]);
+  const scope = user?.id ?? '';
 
   const notify = useCallback((message: string, kind: 'success' | 'error' | 'info' = 'info') => {
     const id = uid('toast');
@@ -98,7 +104,7 @@ export default function App() {
     }, 5200);
   }, []);
 
-  // Arranque: sesión OAuth, estado cifrado o estado plano.
+  // Arranque: sesión Supabase (si está configurado), OAuth de GitHub, estado cifrado o plano.
   useEffect(() => {
     const oauth = consumeOAuthResult();
     if (oauth) {
@@ -110,13 +116,69 @@ export default function App() {
       }
     }
 
-    if (isLocked()) {
-      setPhase('locked');
+    if (!supabase) {
+      if (isLocked()) {
+        setPhase('locked');
+        return;
+      }
+      const stored = readPlainState();
+      setState(stored ?? emptyState());
+      setPhase('ready');
       return;
     }
-    const stored = readPlainState();
-    setState(stored ?? emptyState());
-    setPhase('ready');
+
+    let cancelled = false;
+    const loadForUser = async (userId: string) => {
+      if (isLocked(userId)) {
+        setPhase('locked');
+        return;
+      }
+      let stored = readPlainState(userId);
+      if (!stored) {
+        try {
+          const cloud = await loadCloudState(userId);
+          if (cloud) {
+            stored = cloud;
+            await savePlainState(cloud, userId);
+          }
+        } catch {
+          // Sin conexión: seguimos con estado vacío.
+        }
+      }
+      if (cancelled) return;
+      setState(stored ?? emptyState());
+      setPhase('ready');
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session?.user) {
+        setUser(data.session.user);
+        void loadForUser(data.session.user.id);
+      } else {
+        setPhase('auth');
+      }
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      if (session?.user) {
+        setUser(session.user);
+        void loadForUser(session.user.id);
+      } else {
+        setUser(null);
+        setState(null);
+        setRemoteJobs([]);
+        setErrors([]);
+        setFetchedAt(null);
+        setPhase('auth');
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
   }, [notify]);
 
   useEffect(() => {
@@ -164,9 +226,13 @@ export default function App() {
     if (!state || phase !== 'ready') return;
     const timer = setTimeout(() => {
       const task = keyRef.current
-        ? saveEncryptedState(state, keyRef.current.key, keyRef.current.salt, keyRef.current.iterations)
-        : savePlainState(state);
-      task.catch(() => notify('No se han podido guardar los cambios en este navegador.', 'error'));
+        ? saveEncryptedState(state, keyRef.current.key, keyRef.current.salt, keyRef.current.iterations, scope)
+        : savePlainState(state, scope);
+      task
+        .then(() => {
+          if (user) void saveCloudState(user.id, state).catch(() => {});
+        })
+        .catch(() => notify('No se han podido guardar los cambios en este navegador.', 'error'));
     }, 250);
     return () => clearTimeout(timer);
   }, [state, phase, notify]);
@@ -280,17 +346,17 @@ export default function App() {
 
   const handleUnlock = useCallback(
     async (passphrase: string) => {
-      const result = await unlockState(passphrase);
+      const result = await unlockState(passphrase, scope);
       keyRef.current = { key: result.key, salt: result.salt, iterations: result.iterations };
       setState(result.state);
       setPhase('ready');
       notify('Datos desbloqueados.', 'success');
     },
-    [notify],
+    [notify, scope],
   );
 
   const handleWipe = useCallback(() => {
-    wipeAll();
+    wipeAll(scope);
     keyRef.current = null;
     clearToken();
     setToken(null);
@@ -298,29 +364,30 @@ export default function App() {
     setRemoteJobs([]);
     setErrors([]);
     setFetchedAt(null);
+    if (user) void deleteCloudState(user.id).catch(() => {});
     const fresh = emptyState();
     setState(fresh);
     setPhase('ready');
     navigate('inicio');
     notify('Datos borrados de este navegador.', 'info');
-  }, [navigate, notify]);
+  }, [navigate, notify, scope, user]);
 
   const handleEnableLock = useCallback(
     async (passphrase: string) => {
       if (!state) return;
-      const context = await enableLock(passphrase, state);
+      const context = await enableLock(passphrase, state, scope);
       keyRef.current = context;
       setState((current) => (current ? { ...current, updatedAt: Date.now() } : current));
     },
-    [state],
+    [state, scope],
   );
 
   const handleDisableLock = useCallback(async () => {
     if (!state) return;
-    await disableLock(state);
+    await disableLock(state, scope);
     keyRef.current = null;
     setState((current) => (current ? { ...current, updatedAt: Date.now() } : current));
-  }, [state]);
+  }, [state, scope]);
 
   const handleExport = useCallback(
     async (passphrase: string | null) => {
@@ -386,7 +453,8 @@ export default function App() {
     clearToken();
     setToken(null);
     setGhUser(null);
-    notify('Sesión de GitHub cerrada. Tus datos locales siguen aquí.', 'info');
+    if (supabase) void supabase.auth.signOut();
+    notify('Sesión cerrada. Tus datos locales siguen aquí.', 'info');
   }, [notify]);
 
   const handleCloudSave = useCallback(
@@ -460,6 +528,15 @@ export default function App() {
     );
   }
 
+  if (phase === 'auth') {
+    return (
+      <>
+        <AuthScreen notify={notify} />
+        <ToastHost toasts={toasts} onDismiss={(id) => setToasts((current) => current.filter((toast) => toast.id !== id))} />
+      </>
+    );
+  }
+
   if (phase === 'locked') {
     return (
       <>
@@ -487,7 +564,7 @@ export default function App() {
   }
 
   const decisions = state.decisions;
-  const lockEnabled = isLocked();
+  const lockEnabled = isLocked(scope);
 
   return (
     <div className="app-shell">
@@ -526,8 +603,8 @@ export default function App() {
               <span className="avatar avatar-sm avatar-fallback"><Icon name="user" size={15} /></span>
             )}
             <span className="account-text">
-              <strong>{ghUser ? `@${ghUser.login}` : state.profile.name || 'Modo local'}</strong>
-              <small>{ghUser ? 'GitHub conectado' : 'Datos en este navegador'}</small>
+              <strong>{ghUser ? `@${ghUser.login}` : user ? (user.email ?? 'Cuenta') : (state.profile.name || 'Modo local')}</strong>
+              <small>{ghUser ? 'GitHub conectado' : user ? 'Cuenta Supabase' : 'Datos en este navegador'}</small>
             </span>
             {lockEnabled && <Icon name="lock" size={14} />}
           </button>

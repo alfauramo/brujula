@@ -8,7 +8,7 @@
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://avatars.githubusercontent.com; connect-src 'self' ws://localhost:* http://localhost:* https://api.github.com https://www.arbeitnow.com https://remotive.com https://jobicy.com https://*.workers.dev; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://avatars.githubusercontent.com; connect-src 'self' ws://localhost:* http://localhost:* https://api.github.com https://*.supabase.co https://www.arbeitnow.com https://remotive.com https://jobicy.com https://*.workers.dev https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Brújula · empleo que encaja</title>

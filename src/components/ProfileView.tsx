@@ -81,7 +81,7 @@ export function ProfileView({
           <input
             ref={fileInput}
             type="file"
-            accept=".pdf,.docx,.txt,.md,application/pdf,text/plain"
+            accept=".pdf,.docx,.doc,.txt,.md,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/pdf,application/msword,image/*"
             hidden
             onChange={(event) => {
               const file = event.target.files?.[0];

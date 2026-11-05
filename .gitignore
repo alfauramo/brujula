@@ -28,3 +28,6 @@ dist-ssr
 .env.local
 .wrangler
 
+
+# Supabase CLI temp
+supabase/.temp/
