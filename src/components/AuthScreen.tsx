@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Icon } from './ui';
 
-export function AuthScreen({ notify }: { notify: (message: string, kind?: 'success' | 'error' | 'info') => void }) {
+export function AuthScreen({
+  notify,
+  onGuest,
+}: {
+  notify: (message: string, kind?: 'success' | 'error' | 'info') => void;
+  onGuest?: () => void;
+}) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,6 +103,11 @@ export function AuthScreen({ notify }: { notify: (message: string, kind?: 'succe
             <Icon name="github" size={14} /> GitHub
           </button>
         </div>
+        {onGuest && (
+          <button type="button" className="btn btn-ghost btn-block" onClick={onGuest}>
+            Continuar sin cuenta (solo este navegador)
+          </button>
+        )}
         {magicSent && <p className="form-success">Revisa tu bandeja de entrada y haz clic en el enlace.</p>}
         <p className="fine-print">
           Si Supabase no está configurado, la app funciona en modo local sin cuenta. Tus datos no se comparten entre usuarios.

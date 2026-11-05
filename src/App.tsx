@@ -81,6 +81,7 @@ export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [user, setUser] = useState<User | null>(null);
+  const [guestMode, setGuestMode] = useState(false);
   const [route, setRoute] = useState<Route>(readRoute);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [remoteJobs, setRemoteJobs] = useState<Job[]>([]);
@@ -116,7 +117,7 @@ export default function App() {
       }
     }
 
-    if (!supabase) {
+    if (!supabase || guestMode) {
       if (isLocked()) {
         setPhase('locked');
         return;
@@ -179,7 +180,7 @@ export default function App() {
       cancelled = true;
       subscription.subscription.unsubscribe();
     };
-  }, [notify]);
+  }, [notify, guestMode]);
 
   useEffect(() => {
     sourcesRef.current = state?.settings.sources ?? [];
@@ -531,7 +532,7 @@ export default function App() {
   if (phase === 'auth') {
     return (
       <>
-        <AuthScreen notify={notify} />
+        <AuthScreen notify={notify} onGuest={() => setGuestMode(true)} />
         <ToastHost toasts={toasts} onDismiss={(id) => setToasts((current) => current.filter((toast) => toast.id !== id))} />
       </>
     );
